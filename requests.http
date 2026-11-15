@@ -1,0 +1,157 @@
+### PageTurn Library API requests
+### 1. In VS Code, install the "REST Client" extension if it is not installed.
+### 2. Open a terminal in the PageTurnLibrary folder and run: npm start
+### 3. Wait for "Server running at http://localhost:3000".
+
+
+### 4. Click "Send Request" above any request below to see its status and data.
+### Tip: Send the requests in order. The book created below is used for update/delete,
+### and the new loan can be used to try the PATCH status flow.
+
+@baseUrl = http://localhost:3000
+@bookId = {{createBook.response.body.bookId}}
+@loanId = {{createLoan.response.body.loanId}}
+
+### Requirement 1: Express server / check that the API is running
+### Expected: 200 OK, with the API name and route list in the response panel.
+GET {{baseUrl}}/
+
+### Requirement 2: SQLite data / view all readers
+### Expected: 200 OK, a JSON array with the sample readers from the SQLite database.
+GET {{baseUrl}}/readers
+
+### View one reader
+### Expected: 200 OK, one reader object (for example Ravi).
+GET {{baseUrl}}/readers/1
+
+### Add a reader
+### Expected: 201 Created, a new readerId, and a success message.
+# @name createReader
+POST {{baseUrl}}/readers
+Content-Type: application/json
+
+{
+  "name": "Pawan Kalyan",
+  "email": "pawan@example.com"
+}
+
+### Requirement 3: Book CRUD / view all books
+### Expected: 200 OK, a JSON array of books.
+GET {{baseUrl}}/books
+
+### View one book
+### Expected: 200 OK, one book object.
+GET {{baseUrl}}/books/1
+
+### Create a book (REST Client automatically uses its returned ID for update/delete)
+### Expected: 201 Created, a bookId, and a success message.
+# @name createBook
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "name": "Harry Potter",
+  "genre": "Fantasy"
+}
+
+### Update book with ID in @bookId
+### Expected: 200 OK and "Book updated successfully".
+PUT {{baseUrl}}/books/{{bookId}}
+Content-Type: application/json
+
+{
+  "name": "Harry Potter - Updated",
+  "genre": "Fantasy"
+}
+
+### Delete book with ID in @bookId (only succeeds if no loan uses it)
+### Expected: 200 OK if there are no loans for that book; otherwise 409 Conflict.
+DELETE {{baseUrl}}/books/{{bookId}}
+
+### Requirement 4: JOIN endpoint / see loan details with reader and book names
+### Expected: 200 OK, a JSON array with loan_id, reader_name, book_name, and status.
+GET {{baseUrl}}/loans/details
+
+### Requirement 5: Book validation / try an invalid book (expected 400)
+### Expected: 400 Bad Request with {"error":"Book name is required"}.
+POST {{baseUrl}}/books
+Content-Type: application/json
+
+{
+  "name": "cfg",
+  "genre": "Science"
+}
+
+### Requirement 5: Also test validation when updating a book (expected 400)
+### Book 1 exists; the empty name should be rejected before it is updated.
+PUT {{baseUrl}}/books/1
+Content-Type: application/json
+
+{
+  "name": " ",
+  "genre": "Science"
+}
+
+### Requirement 6: Search books by genre
+### Expected: 200 OK, only books whose genre matches Science.
+GET {{baseUrl}}/books?genre=Science
+
+### Loans / list loan records
+### Expected: 200 OK, a JSON array of loans and their statuses.
+GET {{baseUrl}}/loans
+
+### View one loan
+### Expected: 200 OK, one loan object with reader_id, book_id, and status.
+GET {{baseUrl}}/loans/1
+
+### Create a loan (starts pending; REST Client automatically uses its returned ID below)
+### Expected: 201 Created and a new loanId with status "pending".
+# @name createLoan
+POST {{baseUrl}}/loans
+Content-Type: application/json
+
+{
+  "reader_id": 1,
+  "book_id": 2
+}
+
+### Special twist test 1: a new loan starts pending; pending -> done skips a step (expected 400)
+### Expected: 400 Bad Request. Send this first, while the new loan is still pending.
+PATCH {{baseUrl}}/loans/{{loanId}}/status
+Content-Type: application/json
+
+{
+  "status": "done"
+}
+
+### Special twist test 2: pending -> approved (expected 200)
+### Expected: 200 OK and status "approved".
+PATCH {{baseUrl}}/loans/{{loanId}}/status
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+### Special twist test 3: approved -> pending moves backward (expected 400)
+### Expected: 400 Bad Request with {"error":"Invalid status change"}.
+### The rejected request leaves the new loan approved.
+PATCH {{baseUrl}}/loans/{{loanId}}/status
+Content-Type: application/json
+
+{
+  "status": "pending"
+}
+
+### Complete the flow: approved -> done (expected 200)
+### Send after the approved -> pending test above.
+PATCH {{baseUrl}}/loans/{{loanId}}/status
+Content-Type: application/json
+
+{
+  "status": "done"
+}
+
+### See all current loan data after changes
+### Expected: 200 OK; verify the updated loan status in this response.
+GET {{baseUrl}}/loans/details

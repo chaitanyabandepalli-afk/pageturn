@@ -1,0 +1,16 @@
+{
+  "name": "pageturn-library",
+  "version": "1.0.0",
+  "description": "Book lending API built with Express and SQLite",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "db": "node db-shell.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
